@@ -3,126 +3,418 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>神社検定 Quizz</title>
+    <title>神社検定 バイリンガルクイズ</title>
     <style>
-        :root { --main-color: #8b0000; --bg-color: #f9f6f0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-color); color: #333; margin: 0; padding: 20px; }
-        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 500px; margin: auto; }
-        .btn { background: var(--main-color); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; margin-top: 10px; }
-        .btn-opt { background: #f0f0f0; color: #333; text-align: left; }
-        .lang-toggle { float: right; background: #eee; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
-        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; background: #666; }
-        .explanation { background: #eef6fc; padding: 12px; border-left: 4px solid #2196F3; border-radius: 4px; margin-top: 15px; font-size: 14px; }
-        .stats { font-size: 14px; color: #666; margin-bottom: 10px; }
+        :root {
+            --primary: #8b0000;
+            --bg: #f9f6f0;
+            --card-bg: #ffffff;
+            --text-ja: #2b2b2b;
+            --text-en: #555555;
+            --accent: #d9534f;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-ja);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            box-sizing: border-box;
+        }
+        h1 { font-size: 20px; text-align: center; color: var(--primary); margin-top: 0; }
+        .sub-title { font-size: 12px; color: var(--text-en); text-align: center; display: block; margin-top: -10px; margin-bottom: 20px; }
+        
+        /* レベル選択画面 */
+        .level-select { display: flex; flex-direction: column; gap: 12px; }
+        .btn-level {
+            background: white; border: 2px solid var(--primary); color: var(--primary);
+            padding: 15px; border-radius: 12px; font-weight: bold; cursor: pointer; text-align: left;
+            transition: all 0.2s;
+        }
+        .btn-level:active { background: var(--primary); color: white; }
+        .btn-level span { display: block; font-size: 12px; font-weight: normal; color: var(--text-en); }
+        
+        /* クイズ画面 */
+        .header-status { display: flex; justify-content: space-between; font-size: 13px; color: #777; margin-bottom: 10px; }
+        .question-box { margin-bottom: 20px; }
+        .q-ja { font-weight: bold; font-size: 16px; margin-bottom: 4px; }
+        .q-en { font-size: 14px; color: var(--text-en); font-style: italic; }
+        
+        .opt-btn {
+            width: 100%; background: #f8f9fa; border: 1px solid #ddd; padding: 12px; border-radius: 10px;
+            margin-bottom: 10px; text-align: left; cursor: pointer; font-size: 14px;
+        }
+        .opt-btn:active { background: #e2e8f0; }
+        .opt-en { display: block; font-size: 12px; color: var(--text-en); margin-top: 2px; }
+
+        /* 解説 */
+        .exp-box { background: #f0f7ff; border-left: 4px solid #3182ce; padding: 12px; border-radius: 6px; margin-top: 15px; font-size: 13px; }
+        .exp-section { margin-bottom: 8px; }
+        .exp-section:last-child { margin-bottom: 0; }
+        .exp-title { font-weight: bold; color: #2b6cb0; }
+        
+        .btn-action {
+            width: 100%; background: var(--primary); color: white; border: none; padding: 14px;
+            border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 15px;
+        }
+        
+        .progress-bar { height: 6px; background: #eee; border-radius: 3px; margin-bottom: 15px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
+        .badge { background: var(--primary); color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <button class="lang-toggle" onclick="toggleLang()">EN / JA</button>
-    <div id="stats" class="stats"></div>
-    <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
-
-    <div id="quiz-area">
-        <span id="level-badge" class="badge">Lv.1</span>
-        <h3 id="question-text"></h3>
-        <div id="options-container"></div>
-        <div id="result-area" style="display:none;">
-            <p id="feedback" style="font-weight:bold; font-size:18px;"></p>
-            <div id="explanation" class="explanation"></div>
-            <button class="btn" onclick="nextQuestion()">次の問題へ</button>
+<div class="container">
+    <!-- 1. トップ（レベル選択）画面 -->
+    <div id="screen-home">
+        <h1>神社検定 バイリンガル<br><span class="sub-title">Shinto Shrine Quiz (Bilingual)</span></h1>
+        <p style="font-size:13px; text-align:center; color:#666;">レベルを選択してください（1回5問）</p>
+        
+        <div class="level-select">
+            <button class="btn-level" onclick="startQuiz(1)">
+                Level 1: 基礎 (Basic)
+                <span id="progress-lv1">進捗: 0 / 30 完了</span>
+            </button>
+            <button class="btn-level" onclick="startQuiz(2)">
+                Level 2: 中級 (Intermediate)
+                <span id="progress-lv2">進捗: 0 / 30 完了</span>
+            </button>
+            <button class="btn-level" onclick="startQuiz(3)">
+                Level 3: 応用・比較文化 (Advanced)
+                <span id="progress-lv3">進捗: 0 / 30 完了</span>
+            </button>
         </div>
+        
+        <div style="margin-top:30px; text-align:center;">
+            <button onclick="resetAllHistory()" style="background:none; border:none; color:#999; font-size:12px; decoration:underline;">全学習履歴をリセット</button>
+        </div>
+    </div>
+
+    <!-- 2. クイズ実行画面 -->
+    <div id="screen-quiz" style="display:none;">
+        <div class="header-status">
+            <span id="level-indicator" class="badge">Lv.1</span>
+            <span id="question-counter">第 1 / 5 問</span>
+        </div>
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+
+        <div class="question-box">
+            <div id="q-ja" class="q-ja"></div>
+            <div id="q-en" class="q-en"></div>
+        </div>
+
+        <div id="options-container"></div>
+
+        <div id="result-area" style="display:none;">
+            <div id="feedback" style="font-weight:bold; font-size:16px; margin-bottom:10px;"></div>
+            <div class="exp-box">
+                <div class="exp-section">
+                    <span class="exp-title">【解説 / Explanation】</span>
+                    <div id="exp-ja"></div>
+                    <div id="exp-en" style="color:var(--text-en); font-size:12px; margin-top:2px;"></div>
+                </div>
+                <hr style="border:0; border-top:1px solid #cbd5e0; margin:8px 0;">
+                <div class="exp-section">
+                    <span class="exp-title">【世界の文化比較 / Cultural Comparison】</span>
+                    <div id="cmp-ja"></div>
+                    <div id="cmp-en" style="color:var(--text-en); font-size:12px; margin-top:2px;"></div>
+                </div>
+            </div>
+            <button id="next-btn" class="btn-action" onclick="nextQuestion()">次の問題へ</button>
+        </div>
+    </div>
+
+    <!-- 3. 今回のセッション結果画面 -->
+    <div id="screen-result" style="display:none; text-align:center;">
+        <h2>セッション完了！</h2>
+        <p style="color:#666;">Completed 5 Questions</p>
+        <div style="font-size:36px; font-weight:bold; color:var(--primary); margin:20px 0;" id="session-score"></div>
+        <button class="btn-action" onclick="goHome()">レベル選択に戻る</button>
     </div>
 </div>
 
 <script>
-// 1. 問題データ（レベル・日英・比較小ネタ）
-const quizData = [
+// ==========================================
+// データベース（各レベル30問を格納可能）
+// ==========================================
+const quizDatabase = [
+    // --- LEVEL 1 (基礎) ---
     {
-        level: 1,
-        ja: {
-            q: "手水舎（ちょうずや）で手を清める際、最初に洗うべき部位はどこでしょう？",
-            opts: ["右手", "左手", "口", "顔"],
-            exp: "【解説】柄杓を右手で持ち、まず左手を洗います。<br>【文化比較】ギリシャ神話やキリスト教の聖水（Holy Water）、イスラム教のヴドゥ（Wudu）のように、聖域に入る前に水で肉体を清める儀礼は世界共通の文化です。"
-        },
-        en: {
-            q: "When purifying yourself at the Chozuya, which part should you wash first?",
-            opts: ["Right hand", "Left hand", "Mouth", "Face"],
-            exp: "[Explanation] Hold the ladle with your right hand and wash your left hand first.<br>[Cultural Insight] Purifying the body with water before entering a sacred space is a universal concept, seen in Christianity (Holy Water) and Islam (Wudu)."
-        },
-        ans: 1
+        id: 101, level: 1,
+        q_ja: "神社に参拝する際、最初に潜る「鳥居」が持つ主な役割は何でしょう？",
+        q_en: "What is the primary role of the Torii gate that you pass through first when visiting a shrine?",
+        opts: [
+            { ja: "神様がいる神聖な場所と俗世を分ける境界", en: "A boundary separating the sacred realm from the secular world" },
+            { ja: "防衛のための要塞の門", en: "A fortress gate for defense" },
+            { ja: "王の権力を誇示する建造物", en: "A structure to display royal power" },
+            { ja: "時刻を知るための日時計", en: "A sundial for telling time" }
+        ],
+        ans: 0,
+        exp_ja: "鳥居は神域（神聖な場所）と人間が住む俗世（一般の世界）を区切る結界の役割を果たします。",
+        exp_en: "The Torii gate acts as a spiritual boundary separating the sacred realm of the spirits from the secular world.",
+        cmp_ja: "世界各地の宗教にも、ギリシャ神殿の門柱やインド仏教の「トラーナ」のように、聖域と世俗を分ける建築的な門が存在します。",
+        cmp_en: "Worldwide, many religions feature gateway structures indicating entry to sacred space, such as the Torana in Indian Buddhism or classical temple portals."
     },
     {
-        level: 3,
-        ja: {
-            q: "神社の「鳥居」が持つ主な役割として最も適切なものはどれでしょう？",
-            opts: ["防衛のための門", "神域と俗世を分ける境界", "王の権力象徴", "日時計の役割"],
-            exp: "【解説】鳥居は神様の神聖な場所と人間世界を分ける「結界」です。<br>【文化比較】インド仏教の「トラーナ」やアジアンテイストな門と同様、聖域を区切るシンボル構造は世界中に見られます。"
-        },
-        en: {
-            q: "What is the primary role of a Torii gate in a Shinto shrine?",
-            opts: ["A defensive gate", "A boundary separating sacred and secular realms", "A symbol of royal power", "A sundial"],
-            exp: "[Explanation] The Torii gate serves as a spiritual boundary separating the sacred realm from the secular world.<br>[Cultural Insight] Similar boundary symbols exist globally, such as the Torana in Indian Buddhism."
-        },
-        ans: 1
+        id: 102, level: 1,
+        q_ja: "手水舎（ちょうずや）で最初に洗うべき部位はどこでしょう？",
+        q_en: "At the Chozuya (water pavilion), which part of your body should you wash first?",
+        opts: [
+            { ja: "右手", en: "Right hand" },
+            { ja: "左手", en: "Left hand" },
+            { ja: "両足", en: "Both feet" },
+            { ja: "顔全体", en: "Entire face" }
+        ],
+        ans: 1,
+        exp_ja: "柄杓（ひしゃく）を右手で持ち、まず左手に水をかけて清めるのが一般的な作法です。",
+        exp_en: "The standard etiquette is to hold the ladle with your right hand and pour water over your left hand first.",
+        cmp_ja: "キリスト教の「聖水」やイスラム教の「ヴドゥ（礼拝前の洗浄）」のように、水で心身を清めてから聖域に入る文化は世界共通です。",
+        cmp_en: "Purifying oneself with water before entering sacred space is common globally, like Wudu in Islam or using Holy Water in Christianity."
+    },
+    {
+        id: 103, level: 1,
+        q_ja: "一般的に、神社での基本的な参拝作法はどれでしょう？",
+        q_en: "What is the standard etiquette for worshipping at a Shinto shrine?",
+        opts: [
+            { ja: "二礼二拍手一礼", en: "Two bows, two claps, one bow" },
+            { ja: "一礼二拍手一礼", en: "One bow, two claps, one bow" },
+            { ja: "三礼三拍手一礼", en: "Three bows, three claps, one bow" },
+            { ja: "黙祷のみ", en: "Silent prayer only" }
+        ],
+        ans: 0,
+        exp_ja: "深く二回お辞儀をし、二回拍手を打ち、最後に深く一回お辞儀をする「二礼二拍手一礼」が基本です。",
+        exp_en: "The standard ritual is '2 bows, 2 claps, and 1 final bow' to express reverence to the kami.",
+        cmp_ja: "音を立てて神を迎える「拍手」の習慣は神道独特の魅力ですが、キリスト教の拍手（賛美）や他宗教の詠唱のように音で敬意を示す思想と通じます。",
+        cmp_en: "Clapping to invoke or greet deities is distinctive to Shinto, though making sacred sounds for reverence exists across cultures."
+    },
+
+    // --- LEVEL 2 (中級) ---
+    {
+        id: 201, level: 2,
+        q_ja: "神社の境内に飾られる、神聖な場所を示す縄の名称は何でしょう？",
+        q_en: "What is the name of the sacred rope hung in shrine precincts to mark a purified area?",
+        opts: [
+            { ja: "注連縄（しめなわ）", en: "Shimenawa" },
+            { ja: "数珠（じゅず）", en: "Juzu" },
+            { ja: "帯（おび）", en: "Obi" },
+            { ja: "紅白縄（こうはくなわ）", en: "Kohaku-nawa" }
+        ],
+        ans: 0,
+        exp_ja: "注連縄は神様が鎮座する神聖な場所と下界を隔てる結界であり、不浄なものの侵入を防ぐ役割があります。",
+        exp_en: "Shimenawa marks a boundary that wards off evil spirits and indicates the presence of a sacred entity.",
+        cmp_ja: "古代ユダヤ教の幕屋の幕や、縄・麻を使って聖域を囲む世界各地のシャーマニズムの風習と類似した概念です。",
+        cmp_en: "Enclosing sacred areas with woven ropes or cords is seen in various shamanic traditions globally, denoting set-apart spaces."
+    },
+    {
+        id: 202, level: 2,
+        q_ja: "神様にお供えする食べ物全般を指す言葉はどれでしょう？",
+        q_en: "What is the general Shinto term for food offerings presented to the deities?",
+        opts: [
+            { ja: "神饌（しんせん）", en: "Shinsen" },
+            { ja: "精進料理（しょうじんりょうり）", en: "Shojin Ryori" },
+            { ja: "御供物（おくもつ / 仏教用語）", en: "Okumotsu" },
+            { ja: "聖体（せいたい）", en: "Eucharist" }
+        ],
+        ans: 0,
+        exp_ja: "米、酒、水、塩、魚、野菜などを神様にお供えする食事の調度を「神饌」と呼びます。",
+        exp_en: "Shinsen refers to food offerings presented to the kami, typically including rice, sake, water, salt, fish, and vegetables.",
+        cmp_ja: "古代ギリシャ・ローマ神話での供物（Prasada）やヒンドゥー教の神々への食供養など、神々と食べ物を分かち合う儀礼は世界中に見られます。",
+        cmp_en: "Sharing or offering meals with the divine is found worldwide, such as Prasada in Hinduism or animal/grain offerings in ancient Greece."
+    },
+
+    // --- LEVEL 3 (応用) ---
+    {
+        id: 301, level: 3,
+        q_ja: "神道の死生観において、人が亡くなった後にその魂はどうなると考えられているでしょう？",
+        q_en: "In Shinto views on life and death, what is believed to happen to a person's soul after death?",
+        opts: [
+            { ja: "子孫や地域を見守る「祖霊（神）」となる", en: "It becomes an ancestral spirit (kami) protecting descendants" },
+            { ja: "天国か地獄に送られて裁きを受ける", en: "It goes to Heaven or Hell to be judged" },
+            { ja: "別の動物として生まれ変わる（輪廻）", en: "It is reincarnated as an animal or another human" },
+            { ja: "完全に消滅して何も残らない", en: "It completely vanishes into nothingness" }
+        ],
+        ans: 0,
+        exp_ja: "神道では死後も魂は遠くへ行かず、山や神社に留まり、子孫を見守る「祖霊神（それいしん）」になると考えます。",
+        exp_en: "Shinto holds that spirits remain nearby, becoming ancestral guardians (Ujigami/Soreishin) that watch over their family.",
+        cmp_ja: "一神教のような「裁きと天国/地獄」ではなく、古代メソポタミアやアフリカの「祖先崇拝」と非常に似た身近な死生観を持っています。",
+        cmp_en: "Unlike Abrahamic ideas of Heaven/Hell judgment, Shinto closely aligns with indigenous ancestor worship found in African and traditional religions."
     }
 ];
 
-let currentLang = 'ja';
-let currentIndex = 0;
-let history = JSON.parse(localStorage.getItem('shrine_quiz_history')) || { total: 0, correct: 0 };
-
-function updateStats() {
-    const rate = history.total === 0 ? 0 : Math.round((history.correct / history.total) * 100);
-    document.getElementById('stats').innerText = `回答数: ${history.total} | 正解率: ${rate}%`;
+// 30問に拡張するためのプレースホルダー自動生成（未実装分の枠組み）
+for (let l = 1; l <= 3; l++) {
+    const count = quizDatabase.filter(q => q.level === l).length;
+    for (let i = count + 1; i <= 30; i++) {
+        quizDatabase.push({
+            id: l * 100 + i, level: l,
+            q_ja: `【Lv.${l} 追加問題 #${i}】神道に関する設問がここに入ります。`,
+            q_en: `[Lv.${l} Additional Q #${i}] Shinto question text goes here.`,
+            opts: [
+                { ja: "選択肢 A", en: "Option A" },
+                { ja: "選択肢 B", en: "Option B" },
+                { ja: "選択肢 C", en: "Option C" },
+                { ja: "選択肢 D", en: "Option D" }
+            ],
+            ans: 0,
+            exp_ja: "問題の解説テキストがここに表示されます。",
+            exp_en: "Explanation text will appear here.",
+            cmp_ja: "世界文化との比較小ネタがここに表示されます。",
+            cmp_en: "Cultural comparison trivia will appear here."
+        });
+    }
 }
 
-function loadQuestion() {
-    const q = quizData[currentIndex];
-    const langData = q[currentLang];
+// ==========================================
+// アプリ制御ロジック
+// ==========================================
+let currentLevel = 1;
+let currentSessionQuestions = [];
+let currentIndexInSession = 0;
+let sessionCorrectCount = 0;
+
+// LocalStorage から回答済みIDリストを取得
+function getClearedIds() {
+    return JSON.parse(localStorage.getItem('shrine_cleared_ids') || '[]');
+}
+
+function saveClearedId(id) {
+    const cleared = getClearedIds();
+    if (!cleared.includes(id)) {
+        cleared.push(id);
+        localStorage.setItem('shrine_cleared_ids', JSON.stringify(cleared));
+    }
+}
+
+function updateHomeProgress() {
+    const cleared = getClearedIds();
+    for (let l = 1; l <= 3; l++) {
+        const levelTotal = quizDatabase.filter(q => q.level === l).length;
+        const levelCleared = quizDatabase.filter(q => q.level === l && cleared.includes(q.id)).length;
+        document.getElementById(`progress-lv${l}`).innerText = `進捗: ${levelCleared} / ${levelTotal} 完了`;
+    }
+}
+
+function startQuiz(level) {
+    currentLevel = level;
+    const cleared = getClearedIds();
     
-    document.getElementById('level-badge').innerText = `Level ${q.level}`;
-    document.getElementById('question-text').innerText = langData.q;
+    // 対象レベルの未回答問題だけを抽出
+    let available = quizDatabase.filter(q => q.level === level && !cleared.includes(q.id));
     
-    const optsDiv = document.getElementById('options-container');
-    optsDiv.innerHTML = '';
+    // もし全問クリア済みの場合は自動リセットして再挑戦
+    if (available.length === 0) {
+        alert(`Level ${level} の全30問をコンプリートしました！進捗をリセットして再挑戦します。`);
+        const newCleared = cleared.filter(id => Math.floor(id / 100) !== level);
+        localStorage.setItem('shrine_cleared_ids', JSON.stringify(newCleared));
+        available = quizDatabase.filter(q => q.level === level);
+    }
+    
+    // ランダムに最大5問をシャッフル抽出
+    available.sort(() => Math.random() - 0.5);
+    currentSessionQuestions = available.slice(0, 5);
+    
+    currentIndexInSession = 0;
+    sessionCorrectCount = 0;
+    
+    document.getElementById('screen-home').style.display = 'none';
+    document.getElementById('screen-quiz').style.display = 'block';
+    document.getElementById('screen-result').style.display = 'none';
+    
+    renderQuestion();
+}
+
+function renderQuestion() {
+    const q = currentSessionQuestions[currentIndexInSession];
+    document.getElementById('level-indicator').innerText = `Level ${q.level}`;
+    document.getElementById('question-counter').innerText = `第 ${currentIndexInSession + 1} / ${currentSessionQuestions.length} 問`;
+    
+    const progressPercent = ((currentIndexInSession) / currentSessionQuestions.length) * 100;
+    document.getElementById('progress-fill').style.width = `${progressPercent}%`;
+
+    document.getElementById('q-ja').innerText = q.q_ja;
+    document.getElementById('q-en').innerText = q.q_en;
+
+    const optsContainer = document.getElementById('options-container');
+    optsContainer.innerHTML = '';
     document.getElementById('result-area').style.display = 'none';
 
-    langData.opts.forEach((opt, idx) => {
+    q.opts.forEach((opt, idx) => {
         const btn = document.createElement('button');
-        btn.className = 'btn btn-opt';
-        btn.innerText = `${idx + 1}. ${opt}`;
-        btn.onclick = () => checkAnswer(idx);
-        optsDiv.appendChild(btn);
+        btn.className = 'opt-btn';
+        btn.innerHTML = `<div>${idx + 1}. ${opt.ja}</div><span class="opt-en">${opt.en}</span>`;
+        btn.onclick = () => selectAnswer(idx);
+        optsContainer.appendChild(btn);
     });
-    updateStats();
 }
 
-function checkAnswer(selected) {
-    const q = quizData[currentIndex];
-    const isCorrect = selected === q.ans;
+function selectAnswer(selectedIndex) {
+    const q = currentSessionQuestions[currentIndexInSession];
+    const isCorrect = selectedIndex === q.ans;
     
-    history.total++;
-    if (isCorrect) history.correct++;
-    localStorage.setItem('shrine_quiz_history', JSON.stringify(history));
+    if (isCorrect) sessionCorrectCount++;
+    saveClearedId(q.id); // 出題済みとして保存（重複防止）
 
-    document.getElementById('feedback').innerText = isCorrect ? "⭕️ 正解！" : "❌ 不正解...";
-    document.getElementById('feedback').style.color = isCorrect ? "green" : "red";
-    document.getElementById('explanation').innerHTML = q[currentLang].exp;
+    // 選択肢ボタンの無効化
+    const btns = document.querySelectorAll('.opt-btn');
+    btns.forEach((btn, idx) => {
+        btn.disabled = true;
+        if (idx === q.ans) btn.style.border = "2px solid #38a169";
+        if (idx === selectedIndex && !isCorrect) btn.style.border = "2px solid #e53e3e";
+    });
+
+    const feedback = document.getElementById('feedback');
+    feedback.innerText = isCorrect ? "⭕️ 正解！ / Correct!" : "❌ 不正解... / Incorrect";
+    feedback.style.color = isCorrect ? "#2f855a" : "#c53030";
+
+    document.getElementById('exp-ja').innerText = q.exp_ja;
+    document.getElementById('exp-en').innerText = q.exp_en;
+    document.getElementById('cmp-ja').innerText = q.cmp_ja;
+    document.getElementById('cmp-en').innerText = q.cmp_en;
+
     document.getElementById('result-area').style.display = 'block';
 }
 
 function nextQuestion() {
-    currentIndex = (currentIndex + 1) % quizData.length;
-    loadQuestion();
+    currentIndexInSession++;
+    if (currentIndexInSession < currentSessionQuestions.length) {
+        renderQuestion();
+    } else {
+        showSessionResult();
+    }
 }
 
-function toggleLang() {
-    currentLang = currentLang === 'ja' ? 'en' : 'ja';
-    loadQuestion();
+function showSessionResult() {
+    document.getElementById('screen-quiz').style.display = 'none';
+    document.getElementById('screen-result').style.display = 'block';
+    document.getElementById('session-score').innerText = `${sessionCorrectCount} / ${currentSessionQuestions.length} 正解`;
 }
 
-loadQuestion();
+function goHome() {
+    document.getElementById('screen-home').style.display = 'block';
+    document.getElementById('screen-result').style.display = 'none';
+    updateHomeProgress();
+}
+
+function resetAllHistory() {
+    if (confirm("これまでの回答履歴（出題済みリスト）をすべてリセットしますか？")) {
+        localStorage.removeItem('shrine_cleared_ids');
+        updateHomeProgress();
+    }
+}
+
+// 初期化
+updateHomeProgress();
 </script>
 </body>
 </html>

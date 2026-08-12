@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神社検定 Quizz</title>
+    <style>
+        :root { --main-color: #8b0000; --bg-color: #f9f6f0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-color); color: #333; margin: 0; padding: 20px; }
+        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 500px; margin: auto; }
+        .btn { background: var(--main-color); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; margin-top: 10px; }
+        .btn-opt { background: #f0f0f0; color: #333; text-align: left; }
+        .lang-toggle { float: right; background: #eee; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; background: #666; }
+        .explanation { background: #eef6fc; padding: 12px; border-left: 4px solid #2196F3; border-radius: 4px; margin-top: 15px; font-size: 14px; }
+        .stats { font-size: 14px; color: #666; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <button class="lang-toggle" onclick="toggleLang()">EN / JA</button>
+    <div id="stats" class="stats"></div>
+    <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
+
+    <div id="quiz-area">
+        <span id="level-badge" class="badge">Lv.1</span>
+        <h3 id="question-text"></h3>
+        <div id="options-container"></div>
+        <div id="result-area" style="display:none;">
+            <p id="feedback" style="font-weight:bold; font-size:18px;"></p>
+            <div id="explanation" class="explanation"></div>
+            <button class="btn" onclick="nextQuestion()">次の問題へ</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 1. 問題データ（レベル・日英・比較小ネタ）
+const quizData = [
+    {
+        level: 1,
+        ja: {
+            q: "手水舎（ちょうずや）で手を清める際、最初に洗うべき部位はどこでしょう？",
+            opts: ["右手", "左手", "口", "顔"],
+            exp: "【解説】柄杓を右手で持ち、まず左手を洗います。<br>【文化比較】ギリシャ神話やキリスト教の聖水（Holy Water）、イスラム教のヴドゥ（Wudu）のように、聖域に入る前に水で肉体を清める儀礼は世界共通の文化です。"
+        },
+        en: {
+            q: "When purifying yourself at the Chozuya, which part should you wash first?",
+            opts: ["Right hand", "Left hand", "Mouth", "Face"],
+            exp: "[Explanation] Hold the ladle with your right hand and wash your left hand first.<br>[Cultural Insight] Purifying the body with water before entering a sacred space is a universal concept, seen in Christianity (Holy Water) and Islam (Wudu)."
+        },
+        ans: 1
+    },
+    {
+        level: 3,
+        ja: {
+            q: "神社の「鳥居」が持つ主な役割として最も適切なものはどれでしょう？",
+            opts: ["防衛のための門", "神域と俗世を分ける境界", "王の権力象徴", "日時計の役割"],
+            exp: "【解説】鳥居は神様の神聖な場所と人間世界を分ける「結界」です。<br>【文化比較】インド仏教の「トラーナ」やアジアンテイストな門と同様、聖域を区切るシンボル構造は世界中に見られます。"
+        },
+        en: {
+            q: "What is the primary role of a Torii gate in a Shinto shrine?",
+            opts: ["A defensive gate", "A boundary separating sacred and secular realms", "A symbol of royal power", "A sundial"],
+            exp: "[Explanation] The Torii gate serves as a spiritual boundary separating the sacred realm from the secular world.<br>[Cultural Insight] Similar boundary symbols exist globally, such as the Torana in Indian Buddhism."
+        },
+        ans: 1
+    }
+];
+
+let currentLang = 'ja';
+let currentIndex = 0;
+let history = JSON.parse(localStorage.getItem('shrine_quiz_history')) || { total: 0, correct: 0 };
+
+function updateStats() {
+    const rate = history.total === 0 ? 0 : Math.round((history.correct / history.total) * 100);
+    document.getElementById('stats').innerText = `回答数: ${history.total} | 正解率: ${rate}%`;
+}
+
+function loadQuestion() {
+    const q = quizData[currentIndex];
+    const langData = q[currentLang];
+    
+    document.getElementById('level-badge').innerText = `Level ${q.level}`;
+    document.getElementById('question-text').innerText = langData.q;
+    
+    const optsDiv = document.getElementById('options-container');
+    optsDiv.innerHTML = '';
+    document.getElementById('result-area').style.display = 'none';
+
+    langData.opts.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-opt';
+        btn.innerText = `${idx + 1}. ${opt}`;
+        btn.onclick = () => checkAnswer(idx);
+        optsDiv.appendChild(btn);
+    });
+    updateStats();
+}
+
+function checkAnswer(selected) {
+    const q = quizData[currentIndex];
+    const isCorrect = selected === q.ans;
+    
+    history.total++;
+    if (isCorrect) history.correct++;
+    localStorage.setItem('shrine_quiz_history', JSON.stringify(history));
+
+    document.getElementById('feedback').innerText = isCorrect ? "⭕️ 正解！" : "❌ 不正解...";
+    document.getElementById('feedback').style.color = isCorrect ? "green" : "red";
+    document.getElementById('explanation').innerHTML = q[currentLang].exp;
+    document.getElementById('result-area').style.display = 'block';
+}
+
+function nextQuestion() {
+    currentIndex = (currentIndex + 1) % quizData.length;
+    loadQuestion();
+}
+
+function toggleLang() {
+    currentLang = currentLang === 'ja' ? 'en' : 'ja';
+    loadQuestion();
+}
+
+loadQuestion();
+</script>
+</body>
+</html>
